@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PROJECT PASSAGE</title>
+<style>
+  :root{
+    --bg:#080a09; --fg:#c9f2d8; --dim:#5f7a68; --acc:#7df0a8;
+    --warn:#e8c46a; --bad:#e8604a; --line:#1d2b22;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:"Berkeley Mono",Consolas,"DejaVu Sans Mono",monospace;
+    font-size:14px; line-height:1.55; overflow:hidden;
+  }
+  /* blood splash layer */
+  #blood{
+    position:fixed; inset:0; pointer-events:none; z-index:50;
+    opacity:0; mix-blend-mode:multiply;
+    background:
+      radial-gradient(circle at 30% 40%,rgba(139,0,0,.55) 0 4px,rgba(139,0,0,0) 12px),
+      radial-gradient(circle at 70% 60%,rgba(120,0,0,.45) 0 6px,rgba(120,0,0,0) 18px),
+      radial-gradient(circle at 50% 20%,rgba(100,0,0,.4) 0 3px,rgba(100,0,0,0) 10px),
+      radial-gradient(circle at 85% 35%,rgba(90,0,0,.35) 0 5px,rgba(90,0,0,0) 14px);
+  }
+  #flicker{
+    position:fixed; inset:0; pointer-events:none; z-index:51;
+    background:rgba(0,0,0,.18); opacity:0;
+  }
+  #blood.on{animation:blod .8s ease-out}
+  @keyframes blod{0%{opacity:0}30%{opacity:.9}100%{opacity:0}}
+  .glitch{text-shadow:2px 0 rgba(255,0,0,.5),-2px 0 rgba(0,255,255,.4)}
+  @keyframes shake{
+    0%{transform:translate(0,0)}15%{transform:translate(-2px,1px)}
+    30%{transform:translate(3px,-2px)}45%{transform:translate(-3px,2px)}
+    60%{transform:translate(2px,-1px)}75%{transform:translate(-1px,1px)}
+    100%{transform:translate(0,0)}
+  }
+  #frame.shake{animation:shake .32s steps(1) 3}
+  #snd{
+    background:transparent;border:1px solid #2a332d;color:var(--dim);
+    font:inherit;font-size:10px;letter-spacing:.1em;padding:1px 7px;cursor:pointer;
+  }
+  #snd:hover{border-color:var(--acc);color:var(--acc)}
+  #trk.on{color:var(--acc)}
+  /* ---- seizure splash ---- */
+  #seize{
+    position:fixed; inset:0; z-index:200; overflow-y:auto;
+    background:#070a10; color:#fff;
+    font-family:Arial,Helvetica,"Segoe UI",sans-serif;
+  }
+  #seize::before{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:
+      radial-gradient(ellipse 85% 55% at 50% 4%,rgba(44,70,114,.34),rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 65% 48% at 50% 102%,rgba(18,32,56,.46),rgba(0,0,0,0) 70%),
+      repeating-linear-gradient(0deg,rgba(255,255,255,.013) 0 1px,rgba(0,0,0,0) 1px 3px);
+  }
+  #seize.gone{display:none}
+  .sz-wrap{max-width:1000px;margin:0 auto;padding:52px 30px 40px;position:relative;
+    min-height:100%;display:flex;flex-direction:column}
+
+  /* hero */
+  .sz-hero{text-align:center;padding:6px 0 4px}
+  .sz-hero h1{
+    margin:0 0 20px;font-size:clamp(28px,5.4vw,58px);line-height:1.05;
+    font-weight:800;letter-spacing:.012em;text-transform:uppercase;color:#fff;
+    text-shadow:0 2px 26px rgba(0,0,0,.75);
+  }
+  .sz-by{
+    margin:0 0 7px;font-size:15px;font-weight:600;letter-spacing:.02em;color:#c3ccdb;
+  }
+  .sz-as{
+    margin:0;font-size:14.5px;line-height:1.55;color:#9aa7ba;max-width:720px;margin-inline:auto;
+  }
+  .sz-as b{color:#c3ccdb;font-weight:600}
+
+  /* agency seal row */
+  .sz-row{
+    display:flex;justify-content:center;align-items:flex-end;gap:30px;
+    flex-wrap:wrap;margin:44px 0 10px;
+  }
+  .sz-ag{display:flex;flex-direction:column;align-items:center;gap:10px;width:210px}
+  .sz-ag svg{width:180px;height:180px;display:block;filter:drop-shadow(0 4px 18px rgba(0,0,0,.7))}
+  .sz-ag .nm{
+    font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:#b9c4d6;
+    text-align:center;line-height:1.5;font-weight:700;
+  }
+  .sz-ag .sub{font-size:8.5px;letter-spacing:.1em;color:#77839a;text-align:center}
+
+  /* dark inset panel */
+  .sz-panel{
+    background:linear-gradient(180deg,rgba(16,24,40,.94),rgba(9,14,24,.96));
+    border:1px solid rgba(96,120,164,.30);
+    border-radius:3px;padding:26px 34px;margin:30px auto 0;max-width:840px;
+  }
+  .sz-panel p{
+    margin:0 0 11px;font-size:13.5px;line-height:1.78;color:#c6d0e0;text-align:center;
+  }
+  .sz-panel p:last-child{margin-bottom:0}
+  .sz-panel .lead{color:#e8eef7;font-weight:600}
+  .sz-case{
+    font-family:"Courier New",Courier,monospace;font-size:11.5px;line-height:1.9;
+    color:#a9bcd6;background:rgba(4,8,16,.62);border:1px solid rgba(96,120,164,.24);
+    padding:13px 15px;margin:16px 0 0;text-align:left;word-break:break-word;
+  }
+  .sz-case b{color:#dce6f4;font-weight:700}
+  .sz-warn{
+    margin:20px auto 0;max-width:840px;border:1px solid rgba(190,70,70,.55);
+    background:rgba(74,20,20,.30);padding:13px 16px;
+    font-size:12.5px;line-height:1.65;color:#f0c4c4;text-align:center;
+  }
+  .sz-warn b{display:block;letter-spacing:.13em;font-size:11.5px;margin-bottom:5px;color:#ffdede}
+
+  /* gate */
+  .sz-gate{text-align:center;margin:30px 0 0}
+  #loginBtn{
+    font-family:inherit;font-size:12.5px;letter-spacing:.17em;font-weight:700;
+    background:#16233c;color:#e8eef8;border:1px solid rgba(120,150,200,.55);
+    padding:14px 34px;cursor:pointer;border-radius:2px;transition:.16s;
+  }
+  #loginBtn:hover{background:#8b1f1f;border-color:#c05656;color:#fff}
+  .sz-form{margin:22px auto 0;max-width:400px;text-align:left;display:none}
+  .sz-form.on{display:block}
+  .sz-form label{
+    display:block;font-size:9.5px;letter-spacing:.17em;margin:0 0 6px;color:#8fa0ba;font-weight:700;
+  }
+  .sz-form input{
+    width:100%;font-family:"Courier New",Courier,monospace;font-size:13.5px;padding:10px 12px;
+    border:1px solid rgba(120,150,200,.4);background:rgba(4,8,16,.7);color:#dce6f4;
+    margin-bottom:14px;outline:none;border-radius:2px;
+  }
+  .sz-form input:focus{border-color:#7fa8e0;background:rgba(4,8,16,.95)}
+  #authBtn{
+    width:100%;font-family:inherit;font-size:11.5px;letter-spacing:.17em;font-weight:700;
+    background:#8b1f1f;color:#fff;border:0;padding:13px;cursor:pointer;border-radius:2px;
+  }
+  #authBtn:hover{background:#6d1616}
+  .sz-status{
+    margin-top:15px;font-family:"Courier New",Courier,monospace;font-size:12px;
+    color:#8fa8c8;min-height:18px;text-align:center;
+  }
+  .sz-status.ok{color:#7fe0a0}
+
+  /* disclaimer pins to the bottom of the viewport, deliberately understated */
+  .sz-dis{
+    margin-top:auto;padding-top:22px;border-top:1px solid rgba(90,112,150,.22);
+    font-size:10.5px;line-height:1.7;color:#5f6a7d;text-align:center;max-width:760px;margin-inline:auto;
+  }
+  #typing{display:inline-flex;gap:5px;align-items:center;padding:2px 0}
+  #typing i{width:5px;height:5px;background:var(--dim);display:block;animation:tp 1.1s infinite}
+  #typing i:nth-child(2){animation-delay:.18s}
+  #typing i:nth-child(3){animation-delay:.36s}
+  @keyframes tp{0%,60%,100%{opacity:.25}30%{opacity:1}}
+  .msg.min.typing .who{opacity:.5}
+  #frame{
+    max-width:840px; margin:0 auto; height:100%;
+    padding:18px 20px 10px; display:flex; flex-direction:column;
+  }
+  header{padding-bottom:8px; margin-bottom:12px}
+  .row{display:flex; justify-content:space-between; color:var(--dim); font-size:12px; letter-spacing:.08em}
+  .bar{height:5px;background:#1a1f1c;margin-top:6px;position:relative;overflow:hidden}
+  .bar>i{position:absolute;inset:0 auto 0 0;display:block;transition:width .5s ease}
+  #trustBar>i{background:var(--acc)}
+  #suspBar>i{background:var(--bad)}
+  #suspBar{position:relative}
+  #suspBar::after{content:"LOW / DETECTION RISK";position:absolute;right:2px;top:-1px;font-size:9px;color:var(--dim)}
+  .meters{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+  .meters .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);letter-spacing:.1em}
+  #log{flex:1; overflow-y:auto; padding-right:8px; scrollbar-width:thin; scrollbar-color:var(--line) transparent}
+  #log::-webkit-scrollbar{width:6px}
+  #log::-webkit-scrollbar-thumb{background:var(--line)}
+  .msg{margin:0 0 14px; white-space:pre-wrap; word-break:break-word}
+  .who{font-size:11px;letter-spacing:.18em;color:var(--dim);margin-bottom:2px}
+  .who.hot{color:var(--warn)}
+  .who.sys{color:var(--acc)}
+  .you{color:#e9f7ef}
+  .txt{color:var(--fg)}
+  .txt.narr{color:#8fb8a1;font-style:italic}
+  .txt.mem{color:var(--warn);border-left:2px solid #4a3c14;padding-left:10px}
+  .cur{display:inline-block;width:8px;background:var(--acc);animation:bl .7s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+  footer{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  #choices{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+  .ch{
+    cursor:pointer;border:1px solid #2a332d;background:#0c120e;color:var(--fg);
+    padding:7px 10px;font:inherit;font-size:13px;text-align:left;border-radius:0;
+  }
+  .ch:hover{border-color:var(--acc);background:#101a13}
+  .ch:disabled{opacity:.55;cursor:not-allowed}
+  .ch .tg{color:var(--dim);font-size:11px;margin-left:8px}
+  #tx{display:flex;gap:8px}
+  #tx input{
+    flex:1;background:#0c120e;border:1px solid #2a332d;color:var(--fg);
+    font:inherit;font-size:13px;padding:7px 9px;outline:none;
+  }
+  #tx input:focus{border-color:var(--dim)}
+  #tx button{
+    background:#0c120e;border:1px solid #2a332d;color:var(--fg);font:inherit;
+    font-size:12px;padding:0 14px;cursor:pointer;letter-spacing:.08em;
+  }
+  #tx button:hover{border-color:var(--acc);color:var(--acc)}
+  #tx button:disabled{opacity:.3;cursor:not-allowed}
+  #hint{color:var(--dim);font-size:11px;margin-top:8px;letter-spacing:.04em}
+  .boot{color:var(--dim)}
+  .flash{animation:fl .5s ease}
+  @keyframes fl{0%{opacity:.85}100%{opacity:0}}
+  #end{color:var(--warn);letter-spacing:.06em}
+</style>
+</head>
+<body>
+<div id="seize">
+  <div class="sz-wrap">
+
+    <div class="sz-hero">
+      <h1>This Hidden Site Has Been Seized</h1>
+      <p class="sz-by">by the National Bureau of Investigations,</p>
+      <p class="sz-as">as part of a coordinated law enforcement action taken against the
+      <b>Passage Relay Network</b> and the operators who maintained it.</p>
+    </div>
+
+    <div class="sz-row">
+      <div class="sz-ag"><svg viewBox="-100 -100 200 200" role="img" aria-label="NATIONAL BUREAU OF INVESTIGATIONS seal"><defs><path id="t11" fill="none" d="M -76,0 A 76,76 0 0,1 76,0"/><path id="b11" fill="none" d="M -76,0 A 76,76 0 0,0 76,0"/><linearGradient id="au" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4e2a4"/><stop offset=".5" stop-color="#cba52b"/><stop offset="1" stop-color="#8a6a12"/></linearGradient><linearGradient id="gdc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#24548e"/><stop offset="1" stop-color="#0a2048"/></linearGradient></defs><circle r="96" fill="url(#gdc)" stroke="url(#au)" stroke-width="5"/><circle r="89" fill="none" stroke="url(#au)" stroke-width="1.3" opacity=".7"/><circle r="70" fill="none" stroke="#cba52b" stroke-width="0.9" opacity=".3"/>
+<g fill="url(#au)">
+ <path d="M0,-62 l2.2,4.6 5,0.6 -3.6,3.5 0.9,4.9 -4.5,-2.4 -4.5,2.4 0.9,-4.9 -3.6,-3.5 5,-0.6z"/>
+ <path d="M-14,-56 l1.5,3.1 3.5,0.4 -2.5,2.4 0.6,3.4 -3,-1.6 -3,1.6 0.6,-3.4 -2.5,-2.4 3.5,-0.4z" opacity=".85"/>
+ <path d="M14,-56 l1.5,3.1 3.5,0.4 -2.5,2.4 0.6,3.4 -3,-1.6 -3,1.6 0.6,-3.4 -2.5,-2.4 3.5,-0.4z" opacity=".85"/>
+</g>
+<g fill="url(#au)">
+ <path d="M0,-56 l2,4.3 4.6,0.5 -3.3,3.2 0.8,4.5 -4.1,-2.2 -4.1,2.2 0.8,-4.5 -3.3,-3.2 4.6,-0.5z"/>
+</g>
+<g fill="url(#au)">
+ <path d="M-2,-28 C-14,-37 -28,-39 -38,-33 C-30,-36 -24,-32 -20,-27 C-30,-29 -40,-27 -47,-21 C-36,-19 -26,-15 -19,-10 C-29,-11 -38,-8 -44,-2 C-33,-2 -23,1 -15,6 C-11,10 -6,14 0,15 C6,14 11,10 15,6 C23,1 33,-2 44,-2 C38,-8 29,-11 19,-10 C26,-15 36,-19 47,-21 C40,-27 30,-29 20,-27 C24,-32 30,-36 38,-40 C28,-46 14,-44 2,-34 Z"/>
+</g>
+<path d="M-3.5,-24 C-3.5,-30 -2,-34 0,-34 C2,-34 3.5,-30 3.5,-24 Z" fill="#0d2750"/>
+<circle cx="0" cy="-27" r="1.6" fill="#0d2750"/>
+<g fill="url(#au)">
+ <path d="M-7,20 l-4,9 4,-2 4,2z"/>
+ <path d="M7,20 l4,9 -4,-2 -4,2z"/>
+</g>
+
+<text font-family="Arial,Helvetica,sans-serif" font-size="7.6" font-weight="700" letter-spacing="0.45" fill="#ecdcA6"><textPath href="#t11" startOffset="50%" text-anchor="middle">NATIONAL BUREAU OF INVESTIGATIONS</textPath></text><text font-family="Arial,Helvetica,sans-serif" font-size="7.2" font-weight="700" letter-spacing="0.6" fill="#9fb2cc"><textPath href="#b11" startOffset="50%" text-anchor="middle">EST. 1892 &#8226; QUIET INTELLIGENCE</textPath></text></svg><div class="nm">National Bureau<br>of Investigations</div><div class="sub">Primary Agency</div></div>
+      <div class="sz-ag"><svg viewBox="-100 -100 200 200" role="img" aria-label="DEPARTMENT OF CYBER AFFAIRS seal"><defs><path id="t12" fill="none" d="M -76,0 A 76,76 0 0,1 76,0"/><path id="b12" fill="none" d="M -76,0 A 76,76 0 0,0 76,0"/><linearGradient id="au" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4e2a4"/><stop offset=".5" stop-color="#cba52b"/><stop offset="1" stop-color="#8a6a12"/></linearGradient><linearGradient id="gdc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#24548e"/><stop offset="1" stop-color="#0a2048"/></linearGradient></defs><circle r="96" fill="url(#gdc)" stroke="url(#au)" stroke-width="5"/><circle r="89" fill="none" stroke="url(#au)" stroke-width="1.3" opacity=".7"/><circle r="70" fill="none" stroke="#cba52b" stroke-width="0.9" opacity=".3"/>
+<g fill="url(#au)"><path d="M0,-62 l2.2,4.6 5,0.6 -3.6,3.5 0.9,4.9 -4.5,-2.4 -4.5,2.4 0.9,-4.9 -3.6,-3.5 5,-0.6z"/></g>
+<path d="M0,-50 L26,-41 V-6 C26,13 14,25 0,32 C-14,25 -26,13 -26,-6 V-41 Z" fill="#0d2750" stroke="url(#au)" stroke-width="2.8"/>
+<g stroke="#7fd4ff" stroke-width="1.9" fill="none" stroke-linecap="round">
+ <path d="M-12,-18 h10 l5,-6 h8"/><path d="M-12,-6 h17"/>
+ <path d="M-12,6 h8 l6,7"/><path d="M3,-24 v8"/><path d="M7,0 h8"/>
+</g>
+<g fill="#7fd4ff">
+ <circle cx="-12" cy="-18" r="2.3"/><circle cx="-12" cy="-6" r="2.3"/>
+ <circle cx="-12" cy="6" r="2.3"/><circle cx="11" cy="-24" r="2.3"/>
+ <circle cx="15" cy="0" r="2.3"/><circle cx="2" cy="13" r="2.3"/>
+</g>
+
+<text font-family="Arial,Helvetica,sans-serif" font-size="8.4" font-weight="700" letter-spacing="0.6" fill="#ecdcA6"><textPath href="#t12" startOffset="50%" text-anchor="middle">DEPARTMENT OF CYBER AFFAIRS</textPath></text><text font-family="Arial,Helvetica,sans-serif" font-size="7.2" font-weight="700" letter-spacing="0.6" fill="#9fb2cc"><textPath href="#b12" startOffset="50%" text-anchor="middle">EST. 2004 &#8226; NETWORK INTEGRITY</textPath></text></svg><div class="nm">Department of<br>Cyber Affairs</div><div class="sub">Technical Authority</div></div>
+      <div class="sz-ag"><svg viewBox="-100 -100 200 200" role="img" aria-label="INTERNATIONAL CYBER SECURITY BUREAU seal"><defs><path id="t13" fill="none" d="M -76,0 A 76,76 0 0,1 76,0"/><path id="b13" fill="none" d="M -76,0 A 76,76 0 0,0 76,0"/><linearGradient id="au" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4e2a4"/><stop offset=".5" stop-color="#cba52b"/><stop offset="1" stop-color="#8a6a12"/></linearGradient><linearGradient id="gs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26445f"/><stop offset="1" stop-color="#101d2f"/></linearGradient></defs><circle r="96" fill="url(#gs)" stroke="url(#au)" stroke-width="5"/><circle r="89" fill="none" stroke="url(#au)" stroke-width="1.3" opacity=".7"/><g fill="url(#au)"><g transform="translate(0,-64) rotate(0)"><path d="M0,-4.6 l1.4,3 3.2,0.4 -2.3,2.2 0.6,3.2 -2.9,-1.5 -2.9,1.5 0.6,-3.2 -2.3,-2.2 3.2,-0.4z"/></g><g transform="translate(26,-57) rotate(30)"><path d="M0,-4.6 l1.4,3 3.2,0.4 -2.3,2.2 0.6,3.2 -2.9,-1.5 -2.9,1.5 0.6,-3.2 -2.3,-2.2 3.2,-0.4z"/></g><g transform="translate(45,-37) rotate(60)"><path d="M0,-4.6 l1.4,3 3.2,0.4 -2.3,2.2 0.6,3.2 -2.9,-1.5 -2.9,1.5 0.6,-3.2 -2.3,-2.2 3.2,-0.4z"/></g><g transform="translate(57,0) rotate(90)"><path d="M0,-4.6 l1.4,3 3.2,0.4 -2.3,2.2 0.6,3.2 -2.9,-1.5 -2.9,1.5 0.6,-3.2 -2.3,-2.2 3.2,-0.4z"/></g><g transform="translate(-26,-57) rotate(-30)"><path d="M0,-4.6 l1.4,3 3.2,0.4 -2.3,2.2 0.6,3.2 -2.9,-1.5 -2.9,1.5 0.6,-3.2 -2.3,-2.2 3.2,-0.4z"/></g><g transform="translate(-45,-37) rotate(-60)"><path d="M0,-4.6 l1.4,3 3.2,0.4 -2.3,2.2 0.6,3.2 -2.9,-1.5 -2.9,1.5 0.6,-3.2 -2.3,-2.2 3.2,-0.4z"/></g><g transform="translate(-57,0) rotate(-90)"><path d="M0,-4.6 l1.4,3 3.2,0.4 -2.3,2.2 0.6,3.2 -2.9,-1.5 -2.9,1.5 0.6,-3.2 -2.3,-2.2 3.2,-0.4z"/></g></g><path d="M0,-46 L27,-38 V-4 C27,15 15,26 0,33 C-15,26 -27,15 -27,-4 V-38 Z" fill="#e9edf3" stroke="url(#au)" stroke-width="2.2"/><path d="M0,-46 L27,-38 V-19 H0 Z" fill="#1d3a63"/><path d="M0,-19 H27 V-4 C27,15 15,26 0,33 Z" fill="#12294a"/><path d="M0,-46 L-27,-38 V-19 H0 Z" fill="#12294a"/><path d="M0,-19 H-27 V-4 C-27,15 -15,26 0,33 Z" fill="#1d3a63"/><g stroke="url(#au)" stroke-width="1.3" fill="none" opacity=".85"><path d="M0,-46 V33"/><path d="M-27,-19 H27"/></g><g stroke="#ecdcA6" stroke-width="1.7" stroke-linecap="round" fill="none"><path d="M-10,-38 l16,10"/><path d="M10,-38 l-16,10"/><circle cx="-11" cy="-39" r="2.5"/><circle cx="11" cy="-39" r="2.5"/></g><text font-family="Arial,Helvetica,sans-serif" font-size="7.4" font-weight="700" letter-spacing="0.4" fill="#ecdcA6"><textPath href="#t13" startOffset="50%" text-anchor="middle">INTERNATIONAL CYBER SECURITY BUREAU</textPath></text><text font-family="Arial,Helvetica,sans-serif" font-size="7.2" font-weight="700" letter-spacing="0.6" fill="#9fb2cc"><textPath href="#b13" startOffset="50%" text-anchor="middle">JOINT TASK FORCE</textPath></text></svg><div class="nm">International Cyber<br>Security Bureau</div><div class="sub">Joint Task Force</div></div>
+      <div class="sz-ag"><svg viewBox="-100 -100 200 200" role="img" aria-label="OFFICE OF SECURE COMMS INTERDICTION seal"><defs><path id="t14" fill="none" d="M -76,0 A 76,76 0 0,1 76,0"/><path id="b14" fill="none" d="M -76,0 A 76,76 0 0,0 76,0"/><linearGradient id="au" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4e2a4"/><stop offset=".5" stop-color="#cba52b"/><stop offset="1" stop-color="#8a6a12"/></linearGradient><linearGradient id="gs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26445f"/><stop offset="1" stop-color="#101d2f"/></linearGradient></defs><circle r="96" fill="url(#gs)" stroke="url(#au)" stroke-width="5"/><circle r="89" fill="none" stroke="url(#au)" stroke-width="1.3" opacity=".7"/><circle r="70" fill="none" stroke="#cba52b" stroke-width="0.9" opacity=".3"/>
+<g stroke="url(#au)" stroke-width="1.9" fill="none" stroke-linecap="round">
+ <path d="M0,-28 L15,24 H-15 Z"/>
+ <path d="M-9,3 H9"/><path d="M-12,13 H12"/>
+ <path d="M0,-28 v-12"/>
+ <path d="M-6,-35 q6,-5 12,0"/><path d="M-12,-41 q12,-8 24,0" opacity=".75"/>
+ <path d="M-17,-47 q17,-12 34,0" opacity=".5"/>
+</g>
+<circle cx="0" cy="-43" r="3" fill="url(#au)"/>
+
+
+<text font-family="Arial,Helvetica,sans-serif" font-size="7.5" font-weight="700" letter-spacing="0.42" fill="#ecdcA6"><textPath href="#t14" startOffset="50%" text-anchor="middle">OFFICE OF SECURE COMMS INTERDICTION</textPath></text><text font-family="Arial,Helvetica,sans-serif" font-size="7.2" font-weight="700" letter-spacing="0.6" fill="#9fb2cc"><textPath href="#b14" startOffset="50%" text-anchor="middle">DIVISION 7</textPath></text></svg><div class="nm">Office of Secure<br>Comms Interdiction</div><div class="sub">Investigative Arm</div></div>
+    </div>
+
+    <div class="sz-panel">
+      <p class="lead">The action has been taken in coordination with the Office of the
+      Independent Counsel for Operational Security, the Criminal Division of the
+      National Bureau of Investigations, and the Department of Cyber Affairs,
+      with support from the Office of Secure Communications Interdiction.</p>
+      <p>All message traffic, keystroke telemetry, session logs, and associated
+      accounts associated with this relay have been preserved. The operator of
+      Relay VIE-7, a currently serving field officer, is the subject of an active
+      investigation. One embedded asset, in place for four years, has been
+      identified and is being processed separately.</p>
+      <p class="lead">The underlying correspondence is restricted. Access to
+      preserved sessions is limited to reviewing authorities.</p>
+      <div class="sz-case">
+<b>CASE REFERENCE</b> &nbsp; SA-1971-HK-0407<br>
+<b>RELAY</b> &nbsp; VIE-7 &middot; LOCATION UNDISCLOSED<br>
+<b>SUBJECT</b> &nbsp; 1 (operator, serving)<br>
+<b>ASSET</b> &nbsp; 1 (embedded, 4 years)<br>
+<b>SESSION WINDOW</b> &nbsp; 30 minutes maximum<br>
+<b>STANDING ORDERS</b> &nbsp; no real names &middot; no Thursday or Friday morning access
+      </div>
+    </div>
+
+    <div class="sz-warn">
+      <b>WARNING &#8212; CONTINUED ACCESS</b>
+      Any attempt to reach this relay outside a scheduled window, or any use of
+      operative vocabulary, real names, or dead-drop addresses on the open line,
+      will be logged and added to the record.
+    </div>
+
+    <div class="sz-gate">
+      <button id="loginBtn" type="button">OP_SEC-ADMIN &middot; LOGIN</button>
+      <div class="sz-form" id="loginForm">
+        <label for="opid">OPERATOR ID</label>
+        <input id="opid" type="text" value="op_sec-admin" autocomplete="off" spellcheck="false" />
+        <label for="oppass">PASSPHRASE</label>
+        <input id="oppass" type="text" value="passage" autocomplete="off" spellcheck="false" />
+        <button id="authBtn" type="button">AUTHENTICATE</button>
+        <div class="sz-status" id="authStatus"></div>
+      </div>
+    </div>
+
+    <div class="sz-dis">
+      This is a work of fiction. The National Bureau of Investigations, the
+      Department of Cyber Affairs, the International Cyber Security Bureau, the
+      Office of Secure Communications Interdiction, the Office of the Independent
+      Counsel for Operational Security, and every official, operation, and case
+      reference shown above are invented for this narrative and do not depict or
+      refer to any real agency, organization, government, or person.
+    </div>
+
+  </div>
+</div>
+<div id="blood"></div><div id="flicker"></div>
+<audio id="bgm" loop preload="auto"></audio>
+<div id="frame">
+  <header>
+    <div class="row"><span>NODE // VIE-7 &middot; SECURE RELAY</span><span id="clock">T+00:00</span></div>
+    <div class="row" style="margin-top:6px"><span id="opsec">OPSEC: —</span><span id="turns">TURN 0 / 24</span></div>
+    <div class="row" style="margin-top:4px"><span id="trk">SOUND: OFF</span><button id="snd" type="button">[ ENABLE SOUND ]</button></div>
+    <div class="meters">
+      <div><div class="lab"><span>TRUST</span><span id="trustV">0</span></div><div class="bar" id="trustBar"><i style="width:0%"></i></div></div>
+      <div><div class="lab"><span>SUSPICION</span><span id="suspV">0</span></div><div class="bar" id="suspBar"><i style="width:0%"></i></div></div>
+    </div>
+  </header>
+  <div id="log"></div>
+  <footer>
+    <div id="choices"></div>
+    <div id="tx">
+      <input id="msg" maxlength="90" autocomplete="off" spellcheck="false" placeholder="transmit…" />
+      <button id="send">SEND</button>
+    </div>
+    <div id="hint">TYPE ANYTHING to send a message. Ordinary words are safe. Operative words and real names get you caught. Watch the two bars.</div>
+  </footer>
+</div>
+<script>
+"use strict";
+/* ---------------- state ---------------- */
+const S={trust:0,susp:0,turn:0,max:24,maxMs:30*60*1000,start:0,left:30*60,node:null,flags:{},memories:0,ended:false,blocked:false,band:0,visits:{}};
+const NAME=/\b[a-z]+ [A-Z][a-z]{2,}\b/;
+function dayBlocked(){const d=new Date().getDay(),h=new Date().getHours();return (d===4||d===5)&&h<12;}
+const MAXV=100;
+const clamp=v=>Math.max(0,Math.min(MAXV,v));
+const log=document.getElementById('log');
+
+/* ---------------- audio ---------------- */
+let AC=null;
+function click(freq,dur,vol){
+  try{
+    if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type='square'; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+dur);
+    o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+dur);
+  }catch(e){}
+}
+const sfx=()=>click(1800+Math.random()*600,0.012,0.05);
+
+/* ---------------- music ---------------- */
+const SCORE={
+  1:{src:'audio/phase1.mp3',name:'RAIN ON ALLEY MEMORIES',vol:0.26},
+  2:{src:'audio/phase2.mp3',name:'TICK BEFORE PRINT',vol:0.26},
+  3:{src:'audio/phase3.mp3',name:'LAST DROP',vol:0.30},
+  4:{src:'audio/phase4.mp3',name:'MORNING AFTER GLITCH',vol:0.24}
+};
+let soundOn=false, _cur=null;
+function musicOn(){
+  soundOn=true;
+  $('snd').textContent='[ MUTE ]';
+  $('trk').textContent='SOUND: ON';
+  $('trk').classList.add('on');
+  musicPhase((S.node&&S.node.ph)||1,true);
+}
+function musicOff(){
+  soundOn=false;
+  $('snd').textContent='[ ENABLE SOUND ]';
+  $('trk').textContent='SOUND: OFF';
+  $('trk').classList.remove('on');
+  const a=$('bgm'); try{a.pause();}catch(e){}
+}
+function musicPhase(ph,force){
+  if(!soundOn) return;
+  const s=SCORE[ph]||SCORE[1];
+  if(_cur===ph && !force) return;
+  _cur=ph;
+  $('trk').textContent='SOUND: '+s.name;
+  play(s);
+}
+function play(s){
+  const a=$('bgm');
+  try{
+    a.src=s.src; a.loop=true; a.volume=s.vol;
+    const p=a.play();
+    if(p&&p.catch) p.catch(()=>{ /* autoplay blocked until gesture; retry on click */ });
+  }catch(e){}
+}
+// wired in boot(), after $ and the rest of the engine are defined
+
+/* ---------------- render fx ---------------- */
+function flicker(){
+  const f=document.getElementById('flicker');
+  f.style.animation='none'; void f.offsetWidth; f.style.animation='fl .45s ease';
+}
+function duck(ms=1400){
+  const a=$('bgm'); if(!soundOn||!a.volume) return;
+  const target=a.dataset.vol?parseFloat(a.dataset.vol):a.volume;
+  a.dataset.vol=target;
+  a.volume=Math.max(0.05,target*0.35);
+  setTimeout(()=>{ try{a.volume=target;}catch(e){} },ms);
+}
+function blood(n=1){
+  duck(1500);
+  const b=document.getElementById('blood');
+  for(let i=0;i<n;i++){
+    b.style.left=(Math.random()*40-20)+'%';
+    b.style.top=(Math.random()*40-20)+'%';
+    b.style.transform='rotate('+Math.floor(Math.random()*360)+'deg) scale('+(0.7+Math.random()*0.9).toFixed(2)+')';
+    b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
+  }
+}
+function shake(){
+  const fr=document.getElementById('frame');
+  fr.classList.remove('shake'); void fr.offsetWidth; fr.classList.add('shake');
+  setTimeout(()=>fr.classList.remove('shake'),1100);
+}
+// fire glitch effects only when crossing a band upward
+function bandCheck(){
+  const b=band();
+  if(b>S.band){
+    if(b===1) glitch();
+    if(b===2){ glitch(); shake(); }
+    if(b===3){ glitch(); shake(); blood(2); }
+    S.band=b;
+  }
+}
+function glitch(){
+  const log=document.getElementById('log');
+  log.classList.add('glitch');
+  setTimeout(()=>log.classList.remove('glitch'),180);
+}
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function hud(){
+  $('trustBar').firstElementChild.style.width=S.trust+'%';
+  $('suspBar').firstElementChild.style.width=S.susp+'%';
+  $('trustV').textContent=S.trust;
+  $('suspV').textContent=S.susp;
+  $('turns').textContent=`TURN ${S.turn} / ${S.max}`;
+  $('opsec').textContent='OPSEC: '+opsec();
+  const t=S.turn, m=S.max;
+  const remain=Math.max(0,S.left);
+  const rm=Math.floor(remain/60000),rs=Math.floor((remain%60000)/1000);
+  $('clock').textContent='T-'+String(rm).padStart(2,'0')+':'+String(rs).padStart(2,'0');
+}
+function opsec(){
+  if(S.susp>=70) return 'COMPROMISED';
+  if(S.susp>=45) return 'EXPOSED';
+  if(S.susp>=22) return 'NEUTRAL';
+  return 'PARANOID';
+}
+
+/* ---------------- text streaming ---------------- */
+const GLITCH='\u2591\u2592\u2588';
+function corrupt(txt,rate){
+  let out='';
+  for(const ch of txt){
+    out += (ch!==' ' && ch!=='\n' && Math.random()<rate)
+      ? GLITCH[Math.floor(Math.random()*GLITCH.length)]
+      : ch;
+  }
+  return out;
+}
+function band(){
+  if(S.susp>=70) return 3;
+  if(S.susp>=45) return 2;
+  if(S.susp>=25) return 1;
+  return 0;
+}
+function push(cls,who,txt,speed=38){
+  return new Promise(res=>{
+    const b=band();
+    if(b>0) txt=corrupt(txt,[0,0.08,0.18,0.30][b]);
+    const box=document.createElement('div'); box.className='msg';
+    if(who){const w=document.createElement('div'); w.className='who '+cls; w.textContent=who; box.appendChild(w);}
+    const s=document.createElement('span'); s.className='txt '+(cls==='narr'?'narr':cls==='mem'?'mem':'');
+    const c=document.createElement('i'); c.className='cur';
+    s.appendChild(c); box.appendChild(s); log.appendChild(box);
+    let i=0;
+    (function step(){
+      if(i<txt.length){
+        // ellipsis: match a run of 3+ dots, pause once after the whole run
+        if(txt[i]==='.'&&txt[i-1]==='.'){
+          let j=i+1; while(txt[j]==='.') j++;
+          i=j; setTimeout(step,1500+Math.random()*1500); return;
+        }
+        s.insertBefore(document.createTextNode(txt[i++]),c);
+        if(txt[i-1]!==' ') sfx();
+        log.scrollTop=log.scrollHeight;
+        setTimeout(step,speed+Math.random()*22);
+      }else{ c.remove(); log.scrollTop=log.scrollHeight; res(); }
+    })();
+  });
+}
+const sys=t=>push('sys','SYSTEM',t,6);
+
+// pulsing three-dot indicator, shown while "Min" composes her reply
+function typingDot(){
+  const box=document.createElement('div');
+  box.className='msg min typing';
+  const w=document.createElement('div'); w.className='who hot'; w.textContent='MIN';
+  const dots=document.createElement('span'); dots.id='typing';
+  dots.innerHTML='<i></i><i></i><i></i>';
+  box.appendChild(w); box.appendChild(dots); log.appendChild(box);
+  log.scrollTop=log.scrollHeight;
+  return box;
+}
+const clearDot=box=>{ if(box&&box.parentNode) box.remove(); };
+
+/* ---------------- narrative graph ---------------- */
+/* choice: {t:label, to:node, tr:+trust, su:+susp, flag, lock(state)->bool} */
+const N={
+/* ---------- PHASE 1 : CASUAL INFILTRATION ---------- */
+start:{ph:1,say:[
+  {c:'sys',w:'',t:'SECURE RELAY OPEN // 30 MINUTES UNTIL THIS LINE IS TRACED'},
+  {c:'narr',w:'',t:'Someone is reading this line. They cannot see your face yet. You have thirty minutes to make sure they never do.'},
+  {c:'narr',w:'',t:'Here is what you do for a living. You run people. Not police work, not soldiers \u2014 you find someone already inside a building, a company, a ministry, and you keep them there. Fed, housed, protected, and pointed at things until they are useful. Then you get them out, or you do not, and you file a report either way.'},
+  {c:'narr',w:'',t:'You have handled eleven sources this way. Two are dead. One retired to a coastal town and changed her name. You think about her sometimes.'},
+  {c:'hot',w:'MIN',t:'you are late. that means you are nervous. i am glad you are nervous.'},
+  {c:'you',w:'YOU',t:'Did the package land?'},
+  {c:'narr',w:'',t:'The typing dots appear. Three of them. They vanish. Then four.'},
+  {c:'hot',w:'MIN',t:'i only know about the package what you tell me. i work in flowers. you are a customer who wants lilies and is very bad at pretending.'},
+  {c:'narr',w:'',t:'She has been inside the building for four years. You have known her for three of them. In that time you have learned that she lies the way other people breathe, and that you have started lying back.'}
+],ch:[
+  {t:'Tell me about the lilies.',to:'p1_banter',tr:2},
+  {t:'What is the weather like where you are?',to:'p1_banter',tr:3},
+  {t:'I need the address. Now.',to:'p1_oper',su:12,tr:-2}
+]},
+p1_banter:{ph:1,say:[
+  {c:'hot',w:'MIN',t:'rain. the cold kind that gets in your coat. i am on a tram. i have been on this tram for nine years.'},
+  {c:'you',w:'YOU',t:'You could still get off it.'},
+  {c:'hot',w:'MIN',t:'i could. that is the problem. leaving is a decision, and i have spent nine years not making one.'},
+  {c:'narr',w:'',t:'For the record: her name is not Min. Min is a word you both agreed on in the first year, because it is small and hard to hear over a bad line. Her real name is in a file in a building you have never entered. You have never written it down. Not once, in three years.'},
+  {c:'narr',w:'',t:'Trust is a door. You open it one inch and it opens back from the other side.'}
+],ch:[
+  {t:'Nine years is a long time to avoid a decision.',to:'p1_flirt',tr:3,once:1},
+  {t:'I am not asking you to run. I am asking you to be careful.',to:'p1_flirt',tr:4,su:-3},
+  {t:'We do not have time for your tram.',to:'p1_oper',su:9,tr:-3}
+]},
+p1_flirt:{ph:1,say:[
+  {c:'hot',w:'MIN',t:'careful. yes. that is a nice word for what we do. careful, and tired, and not quite honest.'},
+  {c:'narr',w:'',t:'She sends a photo of nothing. Wet pavement. A bus shelter. A streetlight smeared yellow by rain. It means: I am still here.'},
+  {c:'hot',w:'MIN',t:'do you remember what you said in berlin? the last night? i remember. i remember it the way you remember weather.'},
+  {c:'narr',w:'',t:'Every long-running source gets a set of words that mean nothing to a reader and everything to you. Say one and you are both opening a file you agreed, years ago, to never open again.'}
+],ch:[
+  {t:'Say it. Say what I said.',to:'p2_trigger',tr:6},
+  {t:'We do not put that on a wire.',to:'p1_close',su:-4,tr:-1},
+  {t:'Forget Berlin. That file is closed.',to:'p1_oper',su:8,tr:-6,flag:'guarded'}
+]},
+p1_oper:{ph:1,say:[
+  {c:'narr',w:'',t:'The filters watching this line are simple. They are not stupid. Operative words travel the same way love letters do.'},
+  {c:'hot',w:'MIN',t:'you just said a street and a floor number. do you hear it? i work in flowers. you buy flowers. and someone just woke up.'},
+  {c:'you',w:'YOU',t:'Understood.'},
+  {c:'narr',w:'',t:'A pause long enough to feel like the weather changing.'},
+  {c:'hot',w:'MIN',t:'no. do not do that. do not go quiet on me the way the men in grey coats go quiet. i am still here. i am still here.'}
+],ch:[
+  {t:'I hear you. Ease off. Tell me about the rain.',to:'p1_banter',tr:2,su:-6,once:1},
+  {t:'Then cut me off. Do it yourself.',to:'p1_close',su:4,tr:-5},
+  {t:'The grey coats are why I am still on this line.',to:'p2_trigger',tr:5,su:6,flag:'reckless'}
+]},
+p1_close:{ph:1,say:[
+  {c:'hot',w:'MIN',t:'the shop closes for the season next week. you should come by before it does.'},
+  {c:'narr',w:'',t:'It means: come before they move me. It also means: there is a version of this where you are just two people on a tram.'}
+],ch:[
+  {t:'I will come by.',to:'p2_trigger',tr:7},
+  {t:'If I come by, they find you.',to:'p2_trigger',tr:1,su:7},
+  {t:'Understood. Back to work.',to:'p2_trigger',su:2,tr:-4}
+]},
+
+/* ---------- PHASE 2 : SENSORY DECRYPTION ---------- */
+p2_trigger:{ph:2,say:[
+  {c:'narr',w:'',t:'The line shifts. An older channel opens underneath it, carrying a city that no longer goes by that name. This is the part of the job nobody explains to new handlers: the archive. Four years of her life, relayed to you in pieces, because a person is not a file and you have to build the file yourself.'},
+  {c:'hot',w:'MIN',t:'say the word. the one from berlin. just the word, nothing else, and i will bring it across.'},
+  {c:'narr',w:'',t:'Tulips. She says it back.'}
+],ch:[
+  {t:'Tulips.',to:'mem_berlin',mem:'tulips',tr:6},
+  {t:'Corduroy.',to:'mem_vienna',mem:'corduroy',tr:6},
+  {t:'Ricebowl.',to:'mem_hongkong',mem:'ricebowl',tr:6},
+  {t:'I do not remember a word. I remember a night.',to:'p2_soft',tr:5}
+]},
+p2_soft:{ph:2,say:[
+  {c:'hot',w:'MIN',t:'that is worse. a word can be written down. a night can only be remembered wrong, and we are both very good at that.'},
+  {c:'narr',w:'',t:'Rain on a wool coat. Not a picture of rain: the smell of wet wool, the cold of the collar against your jaw, a cigarette lit against the wind and then put out on purpose.'},
+  {c:'narr',w:'',t:'Bad coffee from a dented flask. The particular silence of a safehouse someone emptied two minutes before you arrived. You both know it. Neither of you says it, because saying it means asking why, and neither of you has an answer that does not cost something.'}
+],ch:[
+  {t:'Tulips.',to:'mem_berlin',mem:'tulips',tr:6},
+  {t:'Corduroy.',to:'mem_vienna',mem:'corduroy',tr:6},
+  {t:'I think about that night more than is safe.',to:'p2_soft2',tr:8}
+]},
+p2_soft2:{ph:2,say:[
+  {c:'hot',w:'MIN',t:'yes. i know. that is not something you should send. i am going to pretend i did not read it, and we are both going to know that i read it.'},
+  {c:'narr',w:'',t:'Somewhere, a system counts how fast you type and files it under patience.'}
+],ch:[
+  {t:'Corduroy.',to:'mem_vienna',mem:'corduroy',tr:6},
+  {t:'Ricebowl.',to:'mem_hongkong',mem:'ricebowl',tr:6},
+  {t:'Ask me what I regret.',to:'p2_regret',tr:5}
+]},
+p2_regret:{ph:2,say:[
+  {c:'you',w:'YOU',t:'Vienna. I left before the door closed.'},
+  {c:'narr',w:'',t:'No deniability. You watch the sent marker like a man watching a fuse burn toward his own hand.'},
+  {c:'hot',w:'MIN',t:'you left because they had my name on a list by then. do not make that noble. it was arithmetic. their side had six names on it. mine had one. one does not divide. you did the sums, and the sums said go, and you went.'},
+  {c:'hot',w:'MIN',t:'i have done the sums too. i just never said them out loud where something could hear.'}
+],ch:[
+  {t:'Tulips.',to:'mem_berlin',mem:'tulips',tr:7},
+  {t:'Ricebowl.',to:'mem_hongkong',mem:'ricebowl',tr:7},
+  {t:'Then say it. Say the sums.',to:'p3_open',tr:6,flag:'named'}
+]},
+
+mem_berlin:{ph:2,mem:true,blood:3,say:[
+  {c:'narr',w:'BERLIN, 1974',t:'Your first one. She was twenty-six and pretending to be a shipping clerk, and you were twenty-four and pretending to be a customs inspector, and neither of you was good at it. The word unlocks the file. Not a memory: an audit, with the feeling still attached.'},
+  {c:'narr',w:'',t:'REPORT, FRANKFURT, 0900. Subject believed the route was clear. Subject was wrong. Corrective action approved. Recommend the subject continue believing the route is clear for a further six weeks.'},
+  {c:'narr',w:'',t:'And underneath the report, the real night. A stairwell that smelled of other people cooking. Her hand flat on your chest, over ribs that were not healed yet. One tulip, bought from a man on the corner who did not ask where it came from.'},
+  {c:'narr',w:'',t:'You have never told anyone the second part. You have thought about it every year since, in the same light. That is a kind of surveillance you never agreed to.'}
+],ch:[
+  {t:'I kept the tulip. It is pressed in a book I do not have anymore.',to:'p2_after',tr:8},
+  {t:'That is a lot to keep from one night.',to:'p2_after',tr:4},
+  {t:'Change the subject. Too many details on the wire.',to:'p2_after',su:-5,tr:2}
+]},
+mem_vienna:{ph:2,mem:true,blood:2,say:[
+  {c:'narr',w:'VIENNA, 1969',t:'The one that ended it. Berlin got you both promoted. Vienna got you both nearly killed, and it is the reason you have not been in the same room since. Corduroy. Rain on the inside of the window. The tram that never came.'},
+  {c:'narr',w:'',t:'You owned a corduroy jacket then. You were proud of it. She told you it looked like a man who had strong opinions about his own life. You laughed. Then you did not laugh for a long time.'},
+  {c:'narr',w:'',t:'Safehouse silence. The two of you inside it, not speaking, because speaking would make it real that in eleven minutes you would each be lying to a different man.'},
+  {c:'narr',w:'',t:'The report called it a successful extraction. It was. That is the thing about successful extractions.'}
+],ch:[
+  {t:'I was never the same after. You were.',to:'p2_after',tr:7},
+  {t:'Nobody writes that part in the report.',to:'p2_after',tr:6},
+  {t:'Close this channel.',to:'p2_after',su:-6,tr:-1}
+]},
+mem_hongkong:{ph:2,mem:true,blood:3,say:[
+  {c:'narr',w:'HONG KONG, 1971',t:'The last good one. Three weeks, a harbour full of shipping manifests, and a decision you have never told her you made. Ricebowl. Salt, heat, a ceiling fan turning in a room with the windows open to nothing.'},
+  {c:'narr',w:'',t:'You were twenty-four and certain of everything. Rice at four in the morning after the market closed. She told you about her brother, and you understood she was handing you something you could not give back.'},
+  {c:'narr',w:'',t:'You have been careless on her behalf ever since. It is the only thing that year left you that still pays interest.'}
+],ch:[
+  {t:'I was not certain. I was fast.',to:'p2_after',tr:6},
+  {t:'I have never unlearned that rice.',to:'p2_after',tr:8},
+  {t:'Files only. Not people.',to:'p2_after',su:-7,tr:-3}
+]},
+p2_after:{ph:2,say:[
+  {c:'hot',w:'MIN',t:'there. you gave me a city instead of an answer, and we are both going to pretend that was kind.'},
+  {c:'narr',w:'',t:'The line degrades. Not weather. Attention. Someone is leaning over a shoulder in a room you have never seen.'},
+  {c:'hot',w:'MIN',t:'they moved my file from a drawer to a desk. i know because the tea is fresh now. nobody makes the tea fresh. a drawer is a file nobody is reading. a desk is a file somebody is reading today.'}
+],ch:[
+  {t:'Who moved it?',to:'p3_open',su:7,tr:-1},
+  {t:'Then this is the last time we talk. Listen carefully.',to:'p3_open',tr:6,flag:'final'},
+  {t:'Cut the line. Cut it now.',to:'p3_open',su:-4,tr:1,flag:'cold'}
+]},
+
+/* ---------- PHASE 3 : THE CROSSROADS ---------- */
+p3_open:{ph:3,blood:2,say:[
+  {c:'narr',w:'',t:'The cursor stops blinking. That is not a fault. Someone is reading this line in real time, at your typing speed, because your typing speed is what told them where to start. The cursor stops when a human is looking. Machines do not stop cursors.'},
+  {c:'narr',w:'',t:'Here is what happens in the next ten minutes. They get a name and a room. She gets a list of people she has worked with, four years of names, and a room she cannot leave. You get the end of a career that has nothing left in it, and possibly a charge.'},
+  {c:'hot',w:'MIN',t:'i can hear your room. there is an echo in it that was not there last month. you have been moved into a room with a hard floor. carpet does not echo. that means they took you out of an office and put you somewhere built out of concrete, and that means you are already a file.'},
+  {c:'you',w:'YOU',t:'Understood. Say the word and I am gone.'},
+  {c:'hot',w:'MIN',t:'no. no, do not say that word. we are past the part where one of us makes it easy for the other.'}
+],ch:[
+  {t:'Then come with me. Tonight, not tomorrow.',to:'end_together',req:'TRUST 45 / RISK <45'},
+  {t:'Get clear. I will hold them here.',to:'end_burned'},
+  {t:'Erase everything. Erase me. I will disappear quietly.',to:'end_company'},
+  {t:'Answer me directly: who is in my room?',to:'end_compromised',su:10}
+]},
+
+end_together:{ph:3,end:true,gate:s=>S.trust>=45&&S.susp<45,fallback:'end_burned',blood:2,say:[
+  {c:'narr',w:'',t:'Concretely: a station three countries away, a name she will use at a counter, and a bus that leaves at 04:10 whether or not either of you is on it. You give her the address in a language she already speaks, and eleven minutes between now and whoever finds the flat.'},
+  {c:'narr',w:'',t:'She does not thank you. People thank strangers who helped them.'},
+  {c:'hot',w:'MIN',t:'if we get out, i am going to be very boring at you for a long time. i am going to ask you about the lilies every morning for a decade. that is the plan. that is the whole plan.'},
+  {c:'narr',w:'',t:'Neither of you will be in a file by morning. For the first time in thirty years the record is empty, and it is empty because you were both there.'},
+  {c:'hot',w:'MIN',t:'i said it. out loud. the sums, on a wire, in a room with a hard floor. that is either the bravest or the stupidest thing i have ever done, and i would do it again tomorrow.'},
+  {c:'sys',w:'',t:'END // DEFECTION TOGETHER\nYou leave together. It is loud, and the arithmetic, for once, is on your side.'}
+]},
+end_burned:{ph:3,end:true,blood:3,say:[
+  {c:'narr',w:'',t:'You say the word. She says it back, the way you trained her. It means: go. It also means: I am not following.'},
+  {c:'hot',w:'MIN',t:'no. no, do not. i am not a thing you spend so you get to come out clean. i am not a receipt.'},
+  {c:'narr',w:'',t:'Here is the mechanism. You send a decoy package to a room you have already arranged, timed so that the handler arrives at it while you are on a train. He walks in and finds a dead drop, one fingerprint, and nobody at all. The fingerprint is yours. That is the part you will be asked about.'},
+  {c:'narr',w:'',t:'She is on the tram. She is always on the tram. Somewhere below Vienna the rain has not stopped since Tuesday, and neither of you ever says the word again, which is how you know it was real.'},
+  {c:'hot',w:'MIN',t:'i know what you are doing. i have known since the second week. i am not going to be the thing that makes it easy for you to be clean.'},
+  {c:'sys',w:'',t:'END // THE ASSET BURNED\nShe gets out. You do not. You were always going to be the cost of this.'}
+]},
+end_company:{ph:3,end:true,say:[
+  {c:'narr',w:'',t:'Concretely: you never reply again. In eleven days her file is closed as dormant, which is what happens to sources who go quiet, because most of them go quiet for boring reasons. You take the line apart the way you took apart Vienna. Not with a bang. A name changed, a date dropped, a route marked clear and left clear.'},
+  {c:'narr',w:'',t:'On the last night she asks you to say one true thing, off the record. You say: I was happy. Four years of it. Then you close the channel and it stays closed.'},
+  {c:'narr',w:'',t:'You buy lilies. You do not know why. The florist does not know either. You do not explain, and neither does she.'},
+  {c:'narr',w:'',t:'The record is perfect. Records are only ever perfect when someone who loved the people in them did the editing.'},
+  {c:'sys',w:'',t:'END // THE COMPANY MAN\nYou retire in silence. It is the safest ending, and the only one you will never be able to explain to anyone.'}
+]},
+end_compromised:{ph:3,end:true,blood:4,say:[
+  {c:'narr',w:'',t:'You ask a direct question on an open line, to see who is listening.'},
+  {c:'narr',w:'',t:'Somebody is.'},
+  {c:'narr',w:'',t:'The line does not cut so much as get reclassified. A polite voice you have never heard reads your last four hours back to you in the passive voice. It quotes the sums. It quotes the part where you said you were happy. Every codeword, timestamped, and translated.'},
+  {c:'hot',w:'MIN',t:'ok. ok. you asked. now we find out together what that costs. i am sorry. i am sorry i taught you this could still be done straight.'},
+  {c:'sys',w:'',t:'END // COMPROMISED\nTraced and intercepted. Reckless is a word that only survives one night.'}
+]},
+};
+/* ---------- engine ---------- */
+const codewords={tulips:'mem_berlin',corduroy:'mem_vienna',ricebowl:'mem_hongkong'};
+const OPS=/\b(drop|dead drop|address|handler|safehouse|exfil|package|target|corridor|asset|route|guard|route)\b/i;
+
+function show(node){
+  const prevPh=S.node&&S.node.ph;
+  S.node=node; hud();
+  if(node.ph && node.ph!==prevPh) musicPhase(node.ph);
+  if(node.blood) blood(node.blood);
+  (async()=>{
+    if(!node.say)return;
+    for(const line of node.say){
+      // Min "types": show the pulsing dots, then the line
+      if(line.c==='hot'){
+        const dot=typingDot();
+        await sleep(500+Math.random()*700+line.t.length*9);
+        clearDot(dot);
+      }
+      if(line.c==='you') await sleep(180);
+      if(S.ended&&false)return;
+      await push(line.c==='narr'?'narr':line.c==='sys'?'sys':line.c==='mem'?'mem':'hot',line.w,line.t,
+        line.c==='narr'?17:13);
+      log.scrollTop=log.scrollHeight;
+    }
+    hud();
+    if(!node.end) choices(node);
+  })();
+}
+function reqOk(c){
+  if(c.req.indexOf('TRUST 45')>=0 && S.trust<45) return false;
+  if(c.req.indexOf('RISK <45')>=0 && S.susp>=45) return false;
+  return true;
+}
+function choices(node){
+  const box=$('choices'); box.innerHTML='';
+  if(!node) return;
+  (node.ch||[]).forEach(c=>{
+    const b=document.createElement('button'); b.className='ch';
+    b.innerHTML=c.t+(c.su?`<span class="tg">${c.su>0?'+':''}${c.su} RISK</span>`:'')+(c.tr?`<span class="tg">${c.tr>0?'+':''}${c.tr} TRUST</span>`:'');
+    if(c.req){
+      const ok=reqOk(c);
+      b.disabled=!ok;
+      if(!ok) b.innerHTML+='<span class="tg">LOCKED '+c.req+'</span>';
+    }
+    b.onclick=()=>take(c); box.appendChild(b);
+  });
+}
+function take(c){
+  if(S.ended||S.blocked)return;
+  S.turn++;
+  const revisit = S.visits[c.to] > 0;
+  S.visits[c.to] = (S.visits[c.to]||0)+1;
+  // a back-edge into an already-seen node gives no fresh trust: stops the farm loop
+  if(c.tr && !(c.once && revisit)) S.trust=clamp(S.trust+c.tr);
+  if(c.su)S.susp=clamp(S.susp+c.su);
+  if(c.flag)S.flags[c.flag]=true;
+  if(c.mem){S.memories++; hud(); sys('ARCHIVE DECRYPTED // '+c.mem.toUpperCase()); }
+  flicker(); hud(); bandCheck();
+  choices(null); $('msg').value='';
+  if(S.turn>=S.max){ sys('SESSION LIMIT REACHED // RELAY CLOSED BY SCHEDULER'); return timeout(); }
+  let n=N[c.to];
+  if(n.gate&&!n.gate(S)){ sys('ENCRYPTION KEY INSUFFICIENT // FALLING BACK'); n=N[n.fallback]; }
+  if(n.end){S.ended=true; stopClock();}
+  show(n);
+}
+function timeout(){
+  if(S.ended) return;
+  S.ended=true; stopClock();
+  const n = S.susp>=45 ? N.end_compromised : N.end_company;
+  sys('// RELAY WINDOW EXPIRED');
+  show(n);
+}
+/* free transmit */
+function send(){
+  const el=$('msg'), raw=el.value.trim();
+  if(!raw||S.ended||S.blocked)return;
+  const low=raw.toLowerCase();
+  S.turn++;
+  let risk=OPS.test(raw)?14:0;
+  if(NAME.test(raw)){ risk+=20; sys('NAME DETECTED // OPERATIVE IDENTIFIER ON WIRE (+20 RISK)'); }
+  S.susp=clamp(S.susp+risk);
+  S.trust=clamp(S.trust+2);
+  hud(); flicker(); bandCheck();
+  push('you','YOU',raw,15);
+  if(S.turn>=S.max){ sys('SESSION LIMIT REACHED // RELAY CLOSED BY SCHEDULER'); return timeout(); }
+  const cw=Object.keys(codewords).find(w=>low.includes(w));
+  setTimeout(async()=>{
+    if(risk){
+      sys('PATTERN MATCH // OPERATIVE VOCABULARY DETECTED (+14 RISK)');
+      await sleep(300);
+      await push('hot','MIN',riskLine(),13);
+    }else if(cw){
+      S.memories++; hud(); sys('ARCHIVE DECRYPTED // '+cw.toUpperCase());
+      choices(null); S.ended=false;
+      const n=N[codewords[cw]]; show(n);
+      return;
+    }else{
+      await sleep(300+Math.random()*400);
+      await push('hot','MIN',smallLine(),13);
+    }
+    hud();
+    if(!S.ended&&S.node&&!S.node.end&&S.node.ch) choices(S.node);
+  },260);
+}
+function riskLine(){
+  const a=[
+    'stop using nouns like that. nouns are what they are paid to read.',
+    'that sentence has a shape i recognise. it has the shape of somebody writing it down.',
+    'if you keep writing like that, i stop being able to hear you over the person listening.',
+    'you are speaking to me in a room that is not ours. say it smaller.'
+  ];
+  return a[Math.floor(Math.random()*a.length)];
+}
+function smallLine(){
+  const a=[
+    'i am on the tram. it is the same tram. i am beginning to think the tram is a fact about me. the shop closes next week and then i do not know where i stand.',
+    'tell me something with no nouns in it. tell me what the rain is doing.',
+    'i ate something. it was not good. i am telling you because i want you to know i am alive in the specific way.',
+    'ok. ok. i am here. that is the whole message. i am here.',
+    'do you remember the lilies. do not answer that. i said do not answer that.',
+    'it is very quiet on my side. it is not a good quiet. it is an attention quiet. someone has been standing near me twice today and pretending not to.',
+  ];
+  return a[Math.floor(Math.random()*a.length)];
+}
+$('send').onclick=send;
+$('msg').addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+document.addEventListener('click',()=>{if(!AC)click(1200,0.008,0.02);},{once:true});
+
+/* ---------------- wiring ---------------- */
+function wire(){
+  // sound toggle
+  $('snd').addEventListener('click',e=>{ e.stopPropagation(); soundOn?musicOff():musicOn(); });
+  // a later user gesture retries playback if the browser blocked autoplay
+  document.addEventListener('click',()=>{ if(soundOn&&_cur) play(SCORE[_cur]); });
+}
+
+/* ---------------- seizure gate ---------------- */
+let entered=false;
+const sleepm=ms=>new Promise(r=>setTimeout(r,ms));
+function openLoginForm(){
+  $('loginForm').classList.add('on');
+  $('loginBtn').style.display='none';
+  $('authStatus').textContent='awaiting credentials...';
+}
+async function authenticate(){
+  const st=$('authStatus');
+  st.textContent='verifying operator signature...';
+  await sleepm(700);
+  st.textContent='checking session window...';
+  await sleepm(650);
+  st.textContent='decrypting preserved sessions...';
+  await sleepm(800);
+  st.textContent='ACCESS GRANTED // opening relay...';
+  await sleepm(600);
+  $('seize').classList.add('gone');
+  entered=true;
+  bootGame();
+}
+
+/* ---------------- real-time session window ---------------- */
+let _timer=null;
+function clockTick(){
+  if(S.ended||S.blocked) return;
+  S.left--;
+  if(S.left<=0){ S.left=0; hud(); return timeout(); }
+  hud();
+}
+function stopClock(){ if(_timer) clearInterval(_timer); _timer=null; }
+
+/* boot */
+function bootGame(){
+(async()=>{
+  S.start=Date.now();
+  if(dayBlocked()){ S.blocked=true;
+    await sys('RELAY CLOSED // THURSDAY / FRIDAY MORNING');
+    await sys('This line is not available during scheduled maintenance.');
+    return; }
+  S.left=S.maxMs/1000;
+  _timer=setInterval(clockTick,1000);
+  // cold open: hook first, context second. the player should be in by second 10.
+  await sys('30 MINUTES. THEN THIS LINE IS TRACED.');
+  await sleep(700);
+  await sys('You are a field officer with 3 weeks until mandatory retirement. She is an asset 4 years deep inside a building you have never entered.');
+  await sleep(700);
+  await sys('You have been protecting her for 3 years. Neither of you has ever said why.');
+  await sleep(800);
+  show(N.start);
+})();
+}
+
+function boot(){
+  wire();
+  // splash is the first thing on screen; the relay does not open until auth passes
+  $('loginBtn').addEventListener('click',openLoginForm);
+  $('authBtn').addEventListener('click',authenticate);
+  $('oppass').addEventListener('keydown',e=>{ if(e.key==='Enter') authenticate(); });
+  boot();
+}
+</script>
+</body>
+</html>
