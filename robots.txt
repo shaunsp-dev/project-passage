@@ -1,0 +1,5 @@
+# Project Passage is not for indexing.
+# It is reachable by direct link only.
+
+User-agent: *
+Disallow: /
