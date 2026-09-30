@@ -1,26 +1,37 @@
-
+// Splash gate test. Clicks the actual buttons - calling openLoginForm() directly
+// would pass even if the click listener was never wired.
 const fs=require('fs'),vm=require('vm');
-// real timers for this test
 const realST=setTimeout, realSI=setInterval;
-require('./harness.js');
+const {ids}=require('./harness.js');
 global.setTimeout=realST; global.setInterval=realSI;
+
 vm.runInContext(fs.readFileSync('./engine.js','utf8'),vm.createContext(global),{filename:'e.js'});
 const X=global.__X, el=id=>document.getElementById(id);
 const out=[];
-out.push('seize overlay present: '+!!el('seize'));
-out.push('loginBtn present: '+!!el('loginBtn'));
-out.push('form hidden at start: '+!el('loginForm').classList.contains('on'));
-out.push('game idle before auth: turns='+X.S.turn+' trust='+X.S.trust);
-X.openLoginForm();
-out.push('form opens: '+el('loginForm').classList.contains('on'));
-out.push('status: "'+el('authStatus').textContent+'"');
-out.push('game STILL idle: turns='+X.S.turn);
-X.authenticate().then(()=>{
-  out.push('seize hidden after auth: '+el('seize').classList.contains('gone'));
-  out.push('final status: "'+el('authStatus').textContent+'"');
-  realST(()=>{
-    out.push('game started: turns='+X.S.turn+' clock-left='+X.S.left);
-    console.log(out.join('\n'));
-    process.exit(0);
-  },3000);
-}).catch(e=>{ out.push('THREW '+e.message); console.log(out.join('\n')); process.exit(1); });
+let fails=0;
+function check(name,got,want){
+  const ok=got===want;
+  if(!ok) fails++;
+  out.push(`${ok?'PASS':'FAIL'}  ${name}  (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
+}
+
+check('splash present on load', !!el('seize'), true);
+check('form hidden on load', el('loginForm').classList.contains('on'), false);
+check('game not started on load', X.S.turn, 0);
+
+// THE regression: a real click on the real button
+el('loginBtn').click();
+check('click reveals form', el('loginForm').classList.contains('on'), true);
+check('click hides login button', el('loginBtn').style.display, 'none');
+check('click sets status', el('authStatus').textContent, 'awaiting credentials...');
+check('game still gated after first click', X.S.turn, 0);
+
+el('authBtn').click();
+realST(()=>{
+  check('auth dismissed splash', el('seize').classList.contains('gone'), true);
+  check('auth reached ACCESS GRANTED', el('authStatus').textContent, 'ACCESS GRANTED // opening relay...');
+  check('game clock started', X.S.left > 1700, true);
+  out.push(fails? `\n${fails} FAILED` : '\nall gate checks passed');
+  console.log(out.join('\n'));
+  process.exit(fails?1:0);
+}, 3200);

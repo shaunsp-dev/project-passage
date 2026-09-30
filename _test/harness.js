@@ -16,12 +16,15 @@ class El {
   get firstElementChild(){ return this.children[0]||null; }
   appendChild(c){ this.children.push(c); return c; }
   insertBefore(n){ /* cursor node: content is tracked in _typed */ return n; }
-  addEventListener(){}
+  addEventListener(type,fn){ (this._ev=this._ev||{})[type]=(this._ev[type]||[]).concat(fn); }
   removeChild(c){ this.children=this.children.filter(x=>x!==c); }
   remove(){}
-  removeEventListener(){}
+  removeEventListener(type,fn){ if(this._ev&&this._ev[type]) this._ev[type]=this._ev[type].filter(f=>f!==fn); }
   set onclick(f){ this._click=f; } get onclick(){ return this._click; }
-  click(){ if(this._click&&!this.disabled) this._click(); }
+  // dispatch for real: a no-op addEventListener here hides dead buttons
+  click(ev={}){ if(this.disabled) return;
+    if(this._click) this._click(ev);
+    (this._ev&&this._ev.click||[]).forEach(f=>f(ev)); }
   get text(){ return this._html||this.textContent; }
 }
 const ids={};
@@ -36,7 +39,7 @@ global.document={
   getElementById(id){ return ids[id]||(ids[id]=new El()); },
   createElement(t){ return new El(t); },
   createTextNode(t){ return {nodeType:3,textContent:t,insertBefore(){},children:[]}; },
-  addEventListener(){}
+  addEventListener(type,fn){ (this._ev=this._ev||{})[type]=(this._ev[type]||[]).concat(fn); }
 };
 global.window={AudioContext:null,webkitAudioContext:null};
 global.AudioContext=function(){ return {
